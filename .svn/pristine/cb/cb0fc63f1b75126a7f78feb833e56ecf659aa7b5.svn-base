@@ -1,0 +1,240 @@
+package com.sliansoft.wechat.service.impl;
+
+import java.io.IOException;
+
+import net.sf.json.JSONObject;
+
+import org.apache.http.HttpEntity;
+import org.apache.http.ParseException;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
+
+
+//import com.mz3co.pcbas.crm.constant.CrmConstants;
+import com.sliansoft.wechat.service.CoreService;
+import com.sliansoft.wechat.util.Constants;
+import com.sliansoft.wechat.util.TokenUtil;
+
+public class CoreServiceImpl implements CoreService {
+	
+	
+	
+	/**
+	 * 根据access_token,code参数获取微信企业号中成员的详细信息
+	 * 
+	 * @param access_token
+	 * @param code
+	 * @return null when error of request wechat api
+	 */
+	public JSONObject getUser(String corpId, String code) {
+		
+		
+		
+		String userId = this.getUserId(corpId, code);
+		
+		
+		return this.getUserByUserId(corpId, userId);
+	
+	}
+	
+	
+	/**
+	 * 根据corpId,code参数获取成员微信企业号中的userId
+	 * 
+	 * @param access_token
+	 * @param code
+	 * @return 40001 no find user 40002 error of request wechat api
+	 */
+	public String getUserId(String corpId, String code) {
+		System.out
+				.println("getUserId-----------------------------------------开始");
+		CloseableHttpResponse resp = null;
+		CloseableHttpClient client = null;
+
+		// JSONObject jsonObject = new JSONObject();
+		// jsonObject.put("access_token", access_token);
+		// jsonObject.put("code", code);
+
+		client = HttpClientBuilder.create().build();
+
+		String url = Constants.URL_GETUSERINFO.replace("ACCESS_TOKEN",
+				TokenUtil.mapToken.get(corpId).getToken());
+		url = url.replace("CODE", code);
+
+		HttpPost post = new HttpPost(url);
+		// post.addHeader("Content-Type", "application/json");
+		// StringEntity stringEntity = new StringEntity(jsonObject.toString(),
+		// ContentType.create("application/json", "utf-8"));
+		// post.setEntity(stringEntity);
+
+		try {
+			resp = client.execute(post);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.out.println("执行post请求时出错");
+
+			return "40002";
+		}
+
+		int statusCode = resp.getStatusLine().getStatusCode();
+		String userId = null;
+
+		if (statusCode >= 200 && statusCode < 300) {
+
+			HttpEntity entity = resp.getEntity();
+
+			String content = null;
+			try {
+				content = EntityUtils.toString(entity);
+
+				// System.out.println("content="+content);
+			} catch (ParseException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return "40002";
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return "40002";
+			}
+			
+			JSONObject obj = JSONObject.fromObject(content);
+
+			if (obj.containsKey("UserId"))
+				userId = obj.getString("UserId");
+
+
+		}
+		System.out.println(userId);
+		return userId;
+	}
+
+	public void requestCode(String corpId) {
+		// 创建默认的httpClient实例
+		CloseableHttpClient httpClient = getHttpClient();
+		String url = Constants.URL_GETCODE
+				.replace("CORPID", corpId)
+				.replace("STATE", corpId)
+				.replace("REDIRECT_URI",
+						"http://utopian4.picp.net/pcbas-crm-web/setUserIdIntoCookie");
+		try {
+			// 用get方法发送http请求
+			HttpGet get = new HttpGet(url);
+			System.out.println("执行get请求:...." + get.getURI());
+			CloseableHttpResponse httpResponse = null;
+			// 发送get请求
+			httpResponse = httpClient.execute(get);
+			try {
+				// response实体
+				HttpEntity entity = httpResponse.getEntity();
+				if (null != entity) {
+					System.out.println("响应状态码:" + httpResponse.getStatusLine());
+					System.out
+							.println("-------------------------------------------------");
+					System.out.println("响应内容:" + EntityUtils.toString(entity));
+					System.out
+							.println("-------------------------------------------------");
+				}
+			} finally {
+				httpResponse.close();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				closeHttpClient(httpClient);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private static CloseableHttpClient getHttpClient() {
+		return HttpClients.createDefault();
+	}
+
+	private static void closeHttpClient(CloseableHttpClient client)
+			throws IOException {
+		if (client != null) {
+			client.close();
+		}
+	}
+
+
+	@Override
+	public JSONObject getUserByUserId(String corpId, String userId) {
+       
+		JSONObject result = new JSONObject();
+		
+		
+		if("40001".equals(userId) || "40002".equals(userId)){
+			result.put("errcode", "40001");
+			result.put("errmsg","获取userId失败");
+			
+			return result;
+		}
+			
+
+		CloseableHttpResponse resp = null;
+		CloseableHttpClient client = null;
+		
+		client = HttpClientBuilder.create().build();
+
+		String url = Constants.URL_GETUSER.replace("ACCESS_TOKEN",
+				TokenUtil.mapToken.get(corpId).getToken());
+		url = url.replace("USERID", userId);
+
+		HttpPost post = new HttpPost(url);
+		// post.addHeader("Content-Type", "application/json");
+		// StringEntity stringEntity = new StringEntity(jsonObject.toString(),
+		// ContentType.create("application/json", "utf-8"));
+		// post.setEntity(stringEntity);
+
+		try {
+			resp = client.execute(post);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+//			System.out.println("执行post请求时出错");
+			result.put("errcode", "40004");
+			result.put("errmsg","执行post请求时出错");
+			return result;
+
+		}
+
+		int statusCode = resp.getStatusLine().getStatusCode();
+//		String userId = null;
+
+		if (statusCode >= 200 && statusCode < 300) {
+
+			HttpEntity entity = resp.getEntity();
+
+			String content = null;
+			try {
+				content = EntityUtils.toString(entity);
+
+				// System.out.println("content="+content);
+			} catch (ParseException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				result.put("errcode", "40005");
+				result.put("errmsg","解析返回内容失败");
+				return result;
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				result.put("errcode", "40005");
+				result.put("errmsg","解析返回内容失败");
+				return result;
+			}
+			
+			return JSONObject.fromObject(content);
+		}
+		return result;
+	}
+}

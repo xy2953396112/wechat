@@ -1,0 +1,51 @@
+package com.sliansoft.wechat.service;
+
+import com.sliansoft.wechat.auth.WechatAccessToken;
+import com.sliansoft.wechat.util.TextMessage;
+
+
+public class SMessage_willdel {
+	
+	public static String POST_URL = "https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=ACCESS_TOKEN";
+	/**
+	 * text消息
+	 * @param touser UserID列表（消息接收者，多个接收者用‘|’分隔）。特殊情况：指定为@all，则向关注该企业应用的全部成员发送————"touser": "UserID1|UserID2|UserID3"
+	 * @param toparty PartyID列表，多个接受者用‘|’分隔。当touser为@all时忽略本参数————"toparty": " PartyID1 | PartyID2 "
+	 * @param totag TagID列表，多个接受者用‘|’分隔。当touser为@all时忽略本参数————"totag": " TagID1 | TagID2 "
+	 * @param msgtype 消息类型，此时固定为：text
+	 * @param agentid 企业应用的id，整型。可在应用的设置页面查看
+	 * @param content 消息内容
+	 * @param safe 表示是否是保密消息，0表示否，1表示是，默认0
+	 * */
+	public static String STextMsg(String touser,String agentid,String content){
+		String PostData = "{\"touser\": \"%s\",\"msgtype\": \"text\",\"agentid\": %s,\"text\": {\"content\": \"%s\"},\"safe\":\"0\"}";
+		return String.format(PostData, touser,agentid,content);  //%s字符对应
+	}
+	 public static void sendMessage() {
+		  
+		   // 调取凭证
+		   String access_token = null;// WechatAccessToken.getAccessToken(Constants.CORPID,Constants.SECRET,1).getToken();
+		   // 新建消息
+		   TextMessage tm = new TextMessage();
+		   //tm.setMsgType("text");
+		   String str = "";// CoreServiceImpl_willdel.getuninspected();
+		   if(str==""||str==null){
+		   tm.setContent("所有设备巡检完成");
+		   }else{
+			   tm.setContent("以下设备尚未巡检:"+str+"");
+		   }
+		   String PostData = STextMsg("@all", "1", tm.getContent());
+		   System.out.println("-------------"+PostData);
+		   
+		  // 所要的格式{"touser":"@all","msgtype": "text","agentid":1,"text": {"content": "请在规定时间内去检查！"},"safe":"0"}
+		  // 现在获取的{"touser": @all,"msgtype": "text","agentid": 1,"text": {"content":请在规定时间内去检查！},"safe":"0"}
+		   int result = WechatAccessToken.PostMessage(access_token, "POST", POST_URL, PostData);
+		   // 打印结果
+			if(0==result){
+				System.out.println("操作成功");
+			}
+			else {
+				System.out.println("操作失败");
+			}
+	}
+}

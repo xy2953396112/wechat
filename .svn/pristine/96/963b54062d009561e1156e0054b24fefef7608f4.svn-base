@@ -1,0 +1,6 @@
+package com.sliansoft.wechat.util;
+
+public enum EnumMethod {
+	GET,POST;
+}
+
